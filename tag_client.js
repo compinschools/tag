@@ -4,6 +4,7 @@ let position = {
     z: 78.36,
     direction: 0
 }
+let model = "adder";
 
 let lastBlips = new Date(1970,1,1);
 
@@ -18,6 +19,7 @@ function getServerId() {
    // console.log("sid",sid);
     return sid;
   }
+
 
   
   onNet('tag:chaser',() => {
@@ -34,11 +36,11 @@ function getServerId() {
     current = players.find( (player) => player.id == getServerId());
     
     if(current && current.position.x != position.x){
-        console.log("reset position",position);
-        console.log("reset current",current);
+        //console.log("reset position",position);
+        //console.log("reset current",current);
         position = current.position;
 
-        console.log("reset position",position);
+        //console.log("reset position",position);
         exports.spawnmanager.forceRespawn()
     }
     //console.log("players",p);
@@ -63,20 +65,21 @@ onNet('onClientGameTypeStart', () => {
           //RemoveVehiclesFromGeneratorsInArea(spawnx-100, spawny-100, spawnz-100, spawnx+100, spawny+100, spawnz+100,1);
           //SetEntityRotation(PlayerPedId(),0,0,spawnPos.direction)
           //await Delay(2000);
+          //console.log("spawn")
           const ped = PlayerPedId();
           coords = GetEntityCoords(ped);
-          const nv = await Car( model=undefined,
+          //console.log("coords",coords)
+          const nv = await Car( model=model,
             damage=undefined,
             color=undefined,
             x=coords[0],
             y=coords[1],
-            z=coords[2],
+            z=coords[2]+50,
             heading=GetEntityHeading(ped),
-            fuel=undefined);
-          
-           
-            
+            fuel=undefined);           
+           // console.log("spawn end")
           })
+          
         });
       
     
@@ -84,12 +87,31 @@ onNet('onClientGameTypeStart', () => {
       exports.spawnmanager.forceRespawn()
     });
 
+onNet('tag:setcar',(m) => {
+  if(m != model){
+    model = m;
+    exports.spawnmanager.forceRespawn();
+  }
+
+})
+
+RegisterCommand('setcar', (source,args,raw) => {
+  if(args.length> 0 && model != args[0]) {
+    TriggerServerEvent('tag:setcar',args[0]);
+  }
+})
+
 RegisterCommand('car', async (source, args, raw) => {
+
+  let model;
+  if(args.length > 0) {
+    model = args[0];
+  }
         const ped = PlayerPedId();
         const coords = GetEntityCoords(ped);
-        console.log(coords);
+        //console.log(coords);
           const nv = await Car(
-              model=undefined,
+              model=model,
               damage=undefined,
               color=undefined,
               x=coords[0],
@@ -97,7 +119,7 @@ RegisterCommand('car', async (source, args, raw) => {
               z=coords[2],
               heading=GetEntityHeading(ped),
               fuel=undefined);
-          console.log(nv);
+          //console.log(nv);
 
 }, false);
 
@@ -114,7 +136,7 @@ RegisterCommand('emptycar', async (source, args, raw) => {
         z=coords[2],
         heading=GetEntityHeading(ped),
         fuel=undefined);
-    console.log(nv2);
+    //console.log(nv2);
 }, false);
 
 RegisterCommand('start', (source, args, raw) => {
@@ -133,8 +155,8 @@ RegisterCommand('setblips', (source, args, raw) => {
 })  
     
       async function EmptyCar(model="adder", damage=1, color=1, x=0, y=0, z=0, heading=-1,fuel=1000) {
-        console.log("x",x)
-        console.log("model",model)
+       // console.log("x",x)
+        //console.log("model",model)
         //console.log("usage: car <model> <damage -4000 to 1000> <color (integer)>")
         
         // check if the model actually exists
@@ -153,8 +175,9 @@ RegisterCommand('setblips', (source, args, raw) => {
         
 
         // Create a vehicle at the player's position
-        const vehicle = CreateVehicle(hash, x,y,z,heading, true, true);
-
+        const vehicle = CreateVehicle(hash, x,y,z+50,heading, true, true);
+        const obj = GetObjectIndexFromEntityIndex(vehicle);
+        PlaceObjectOnGroundProperly(obj);
         SetVehicleDamageModifier(vehicle, damage);
        
       
@@ -173,8 +196,8 @@ RegisterCommand('setblips', (source, args, raw) => {
       }
 
     async function Car(model="adder", damage=1, color=1, x=0, y=0, z=0, heading=-1,fuel=1000) {
-        console.log("x",x)
-        console.log("model",model)
+        //console.log("x",x)
+        //console.log("model",model)
         //console.log("usage: car <model> <damage -4000 to 1000> <color (integer)>")
         if (playerVehicle) {
             DeleteEntity(playerVehicle);
@@ -197,7 +220,12 @@ RegisterCommand('setblips', (source, args, raw) => {
         const ped = PlayerPedId();
 
         // Create a vehicle at the player's position
-        const vehicle = CreateVehicle(hash, x,y,z,heading, true, true);
+        const obj = GetGroundZFor_3dCoord(x,y,z+50,false)
+        //console.log(obj);
+        const vehicle = CreateVehicle(hash, x,y,obj[1],heading, true, true);
+        
+         //const obj = GetObjectIndexFromEntityIndex(vehicle);
+        
         SetPedIntoVehicle(ped, vehicle, -1);
         SetVehicleDamageModifier(vehicle, damage);
        
@@ -210,12 +238,12 @@ RegisterCommand('setblips', (source, args, raw) => {
         SetEntityAsNoLongerNeeded(vehicle);
       
         SetModelAsNoLongerNeeded(model);
-        
+       // console.log("model",model)
         playerVehicle = vehicle; 
         const nv = NetworkGetNetworkIdFromEntity(vehicle);
         //each time a vehicle is created by a player, update the server to what that vehicle is
         TriggerServerEvent("tag:registervehicle",getServerId(),nv);
-        setBlips();
+       // setBlips();
         return playerVehicle; 
       }
 

@@ -1,5 +1,5 @@
 let spawns = [];
-
+let model = "adder";
 const {
     triggerAsyncId
   } = require("async_hooks");
@@ -13,10 +13,18 @@ onNet('onServerResourceStart', (resource) => {
     // console.log("resource started: ",resource);
     if (resource == "tag") {
         spawns = JSON.parse(LoadResourceFile(GetCurrentResourceName(),"spawnLocations.json"))
-        console.log(spawns);
+        //console.log(spawns);
     }
 
 });
+
+onNet('tag:setcar', (m) => {
+    if(model != m){
+    model = m;
+    emitNet('tag:setcar',-1, model);
+    }
+
+})
 
   onNet('tag:registervehicle',(playerid,vehicleentityid) => {
     if( players.filter( (player) => playerid ==player.id ).length == 0){

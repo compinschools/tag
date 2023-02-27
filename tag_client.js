@@ -5,13 +5,6 @@ let position = {
     direction: 0
 }
 
-let checkpointPosition = {
-    x: 699.92,
-    y: 4.819,
-    z: 83.77,
-    diameter: 20
-}
-
 let startTime = undefined;
 let defaultTime = 600000;
 
@@ -19,7 +12,7 @@ let blips = [];
 let model = "adder";
 
 let lastBlips = new Date(1970,1,1);
-let checkpoint = undefined;
+
 let playerVehicle;
 Delay = (ms) => new Promise(res => setTimeout(res, ms));
 let players;
@@ -32,85 +25,30 @@ function getServerId() {
     return sid;
   }
 
-onNet('zombie:end', async() => {
-    
-    
-    startTime = undefined;
-    await Delay(4000);
-    exports.spawnmanager.forceRespawn();
-
-  } )
-onNet('zombie:start',(timer) => {
+  onNet('tag:start',(timer) => {
     defaultTime = timer;
     startTime = new Date();
 
-  })
+  } )
 
-
-  
-
-  onNet('zombie:repair', () => {
-    repair();
-  })
-
-  onNet('zombie:killplayer',() => {
-    //console.log("player kill recieved",playerVehicle);
+  onNet('tag:killplayer',() => {
+    console.log("player kill recieved",playerVehicle);
     NetworkExplodeVehicle(playerVehicle, true,true);
   })
 
-  function repair() {
-    SetVehicleEngineHealth(playerVehicle, 1000);
-    SetVehicleBodyHealth(playerVehicle, 1000);
-    SetVehiclePetrolTankHealth(playerVehicle, 1000);
+
   
-    SetVehicleFixed(playerVehicle);
-  }
-
-  RegisterCommand('repair', () => {
-    repair();
-  })
-
-  RegisterCommand('repairall', () => {
-    TriggerServerEvent("zombie:repairall")
-  })
-
-
-  RegisterCommand('colour', () => {
-    chaserColours();
-  })
-
-  function chaserColours(){
-    SetVehicleColours(playerVehicle,92,92);
-    SetVehicleNeonLightEnabled(playerVehicle,0,true);
-    SetVehicleNeonLightEnabled(playerVehicle,1,true);
-    SetVehicleNeonLightEnabled(playerVehicle,2,true);
-    SetVehicleNeonLightEnabled(playerVehicle,3,true);
-    ToggleVehicleMod(playerVehicle, 22, true) 
-    SetVehicleNeonLightsColour(playerVehicle,94,255,1);
-    SetVehicleXenonLightsColor(playerVehicle, 4);
-  }
-  onNet('zombie:chaser',() => {
-    chaserColours();
-    
+  onNet('tag:chaser',() => {
+    SetVehicleColours(playerVehicle,5,5)
 
   })
 
-  function playerColours(){
-    SetVehicleColours(playerVehicle,1,1);
-    SetVehicleNeonLightEnabled(playerVehicle,0,false);
-    SetVehicleNeonLightEnabled(playerVehicle,1,false);
-    SetVehicleNeonLightEnabled(playerVehicle,2,false);
-    SetVehicleNeonLightEnabled(playerVehicle,3,false);
-    ToggleVehicleMod(playerVehicle, 22, false) ;
-    //SetVehicleNeonLightsColour(playerVehicle,94,255,1);
-    SetVehicleXenonLightsColor(playerVehicle, 4);
-  }
-  onNet('zombie:notchaser',() => {
+  onNet('tag:notchaser',() => {
    // console.log("notechaser anymore")
-    playerColours();
+    SetVehicleColours(playerVehicle,1,1)
 
   })
-  onNet('zombie:updateplayers',(p) => {
+  onNet('tag:updateplayers',(p) => {
     
     players = p;
     current = players.find( (player) => player.id == getServerId());
@@ -132,32 +70,12 @@ onNet('zombie:start',(timer) => {
 
   })
 
-onNet('zombie:lastin',() => {
-    //CREATE A CHECKPOINT
-    
-    
-    const r = 0;
-    const g = 255;
-    const b = 0;
-    const a = 255;
-    const reserved = 0;
-
-    checkpoint = CreateCheckpoint(4,
-        checkpointPosition.x,
-        checkpointPosition.y,
-        checkpointPosition.z,
-        checkpointPosition.x,
-        checkpointPosition.y,
-        checkpointPosition.z,
-        checkpointPosition.diameter, r, g, b, a, reserved);
-
-})
   
 
 
 
 onNet('onClientGameTypeStart', () => {
-    TriggerServerEvent("zombie:initialise");
+    TriggerServerEvent("tag:initialise");
     //const sid = getServerId();
     exports.spawnmanager.setAutoSpawnCallback(() => {
         //console.log(`spawnPos: ${spawnx},${spawny},${spawnz}, `);
@@ -186,31 +104,18 @@ onNet('onClientGameTypeStart', () => {
             fuel=undefined);           
            // console.log("spawn end")
            //set colours
-
-           if(players){
-          const myplayerid = getServerId();
-          const player = players.find( (p) => p.id == myplayerid)
-         // console.log("Player",myplayerid,player.chaser)
-          if(player && player.chaser){
-            chaserColours();
-          }
-          }
-          
-        
-
+          })
           
         });
-      });
       
     
       exports.spawnmanager.setAutoSpawn(true)
       exports.spawnmanager.forceRespawn()
     });
 
-onNet('zombie:setcar',(m) => {
+onNet('tag:setcar',(m) => {
   if(m != model){
     model = m;
-    console.log("Model is",model)
     exports.spawnmanager.forceRespawn();
   }
 
@@ -218,7 +123,7 @@ onNet('zombie:setcar',(m) => {
 
 RegisterCommand('setcar', (source,args,raw) => {
   if(args.length> 0 && model != args[0]) {
-    TriggerServerEvent('zombie:setcar',args[0]);
+    TriggerServerEvent('tag:setcar',args[0]);
   }
 })
 
@@ -228,17 +133,13 @@ RegisterCommand('help',(source,args,raw) => {
   console.log("setcar <model>")
   console.log(" - Sets the car of all players to the model specified")
   console.log("settimer <seconds>")
-  console.log(" - Sets the timer before the zombies explode")
+  console.log(" - Sets the timer before the player who is 'it' explodes")
   console.log("start")
-  console.log(" - Randomly chooses a player to be a zombie and starts the timer")
+  console.log(" - Randomly chooses a player to be 'it' and starts the timer")
   console.log("randomise")
-  console.log(" - Randomly chooses a player to be a zombie and starts the timer")
+  console.log(" - Randomly chooses a player to be 'it' and starts the timer")
   console.log("car <model>")
   console.log(" - changes only the current players car to the model specified")
-  console.log("repair")
-  console.log(" - Repairs your vehicle")
-  console.log("repairall")
-  console.log(" - Repairs all player's vehicles")
 
 
 })
@@ -264,15 +165,12 @@ function drawTxt(x, y, scale, text, r, g, b, a) {
 
 RegisterCommand('settimer', (source,args,raw) => {
   if(args.length > 0 ){
-    TriggerServerEvent('zombie:settimer',parseInt(args[0]));
+    TriggerServerEvent('tag:settimer',parseInt(args[0]));
     console.log(`Timer set to ${args[0]} seconds`);
   }
 
 })
 
-RegisterCommand('fakeplayer', (source,args,raw) => {
-  TriggerServerEvent("zombie:registervehicle",players.length+10,players.length+10);
-})
 
 
 
@@ -294,15 +192,6 @@ RegisterCommand('car', async (source, args, raw) => {
               z=coords[2],
               heading=GetEntityHeading(ped),
               fuel=undefined);
-
-              if(players){
-                const myplayerid = getServerId();
-                const player = players.find( (p) => p.id == myplayerid)
-                console.log("Player",myplayerid,player.chaser)
-                if(player && player.chaser){
-                  chaserColours();
-                }
-                }
           //console.log(nv);
 
 }, false);
@@ -324,17 +213,12 @@ RegisterCommand('emptycar', async (source, args, raw) => {
 }, false);
 
 RegisterCommand('start', (source, args, raw) => {
-    TriggerServerEvent('zombie:randomisechaser');
+    TriggerServerEvent('tag:randomisechaser');
 
-})
-
-RegisterCommand('lastin', (source, args, raw) => {
-    TriggerServerEvent('zombie:startlastin');
-
-})
+})  
 
 RegisterCommand('randomise', (source, args, raw) => {
-    TriggerServerEvent('zombie:randomisechaser');
+    TriggerServerEvent('tag:randomisechaser');
 
 })  
 
@@ -380,7 +264,7 @@ RegisterCommand('setblips', (source, args, raw) => {
         
         const nv = NetworkGetNetworkIdFromEntity(vehicle);
         //each time a vehicle is created by a player, update the server to what that vehicle is
-        TriggerServerEvent("zombie:registervehicle",100,nv);
+        TriggerServerEvent("tag:registervehicle",100,nv);
         return playerVehicle; 
       }
 
@@ -431,7 +315,7 @@ RegisterCommand('setblips', (source, args, raw) => {
         playerVehicle = vehicle; 
         const nv = NetworkGetNetworkIdFromEntity(vehicle);
         //each time a vehicle is created by a player, update the server to what that vehicle is
-        TriggerServerEvent("zombie:registervehicle",getServerId(),nv);
+        TriggerServerEvent("tag:registervehicle",getServerId(),nv);
        // setBlips();
         return playerVehicle; 
       }
@@ -449,37 +333,17 @@ RegisterCommand('setblips', (source, args, raw) => {
       })
 
 //work out touching  
-setTick(() => {
-    //check to see if the player has reached the starting gate
-    if (checkpoint) {
-        const [playerX, playerY, playerZ] = GetEntityCoords(PlayerPedId(), false);
-        const distance = GetDistanceBetweenCoords(checkpointPosition.x, checkpointPosition.y, 0, playerX, playerY, playerZ, false);
-       // console.log(distance);
-        if (distance < checkpointPosition.diameter) {
-            TriggerServerEvent('zombie:gotin', getServerId());
-            DeleteCheckpoint(checkpoint);
-            checkpoint = undefined;
-        }
-    }
-      if (players) {
-
-
-        let numChasers = 0;
-        let numSurvivors = 0;
+  setTick(() => {
+      if(players){
     players.forEach( (player,index) => {
       const entityid = NetworkGetEntityFromNetworkId(player.vehicleid);
-      if(player.chaser) {
-        numChasers++;
-      } else {
-        numSurvivors++;
-      }
       if( entityid && playerVehicle && entityid != playerVehicle && player.chaser && IsEntityTouchingEntity(playerVehicle,entityid))
       {
         //console.log("touching");
         const index = player.id;
         //console.log("playerindex",getServerId());
         //console.log("player.id",index);
-        TriggerServerEvent('zombie:touch', getServerId(), player.id);
+        TriggerServerEvent('tag:touch', getServerId(), player.id);
       }
 
     } )
@@ -497,12 +361,7 @@ setTick(() => {
       const minutes = Math.floor(milli / 60000);
     const seconds = Math.floor((milli - (minutes * 60000)) / 1000);
 
-      drawTxt(0.5, 0, 1, `Time Left: ${minutes}m ${seconds}s`, 255,255, 255, 255);
-      drawTxt(0.5, 0.05, 0.5, `Zombies: ${numChasers} Survivors: ${numSurvivors}`, 0,255, 0, 255);
-     /*  const it = players.find( (player) => player.chaser);
-      if(it){
-        drawTxt(0.5, 0.07, 0.6, `${it.name} is it`, 255,255, 255, 255);
-      } */
+      drawTxt(0.5, 0.1, 1, `Time Left: ${minutes}m ${seconds}s`, 255,255, 255, 255)
     }
 }
 
@@ -526,17 +385,14 @@ setTick(() => {
 
   function setBlips() {
     //removeBlips();
-      playerblips = [];
-    const myplayerid = getServerId();
-    const player = players.find((p) => p.id == myplayerid)
-
+    playerblips = [];
     players.forEach(P => {
         //console.log("forblips",P)
         const entity = NetworkGetEntityFromNetworkId (P.vehicleid)
         var blip = GetBlipFromEntity(entity);
         
         //console.log(blip)
-        if (entity != 0 && !blip && (!P.chaser || (player && player.chaser))) {
+        if (entity != 0 && !blip && !P.chaser) {
           blip = AddBlipForEntity(entity);
           blips.push(blip);
           
@@ -547,14 +403,9 @@ setTick(() => {
         }
         playerblips.push(blip);
         // console.log(serverid,escapee)
-        if (!P.chaser || (player && player.chaser)) {
+        if (!P.chaser) {
           //SetBlipSprite(blip, 429)
-            if (P.chaser) {
-                SetBlipSprite(blip, 429)
-                SetBlipColour(blip,2)
-            } else {
-                SetBlipSprite(blip, 1)
-            }
+          SetBlipSprite(blip, 1)
         } else if(blip) {
           RemoveBlip(blip);
           blips = blips.filter( (b) => b != blip);
@@ -569,7 +420,7 @@ setTick(() => {
       if(!playerblips.includes(blip)){
         RemoveBlip(blip);
         blips = blips.filter( (b) => b != blip);
-        //console.log("removed ghost blip");
+        console.log("removed ghost blip");
       }
 
     } )

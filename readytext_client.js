@@ -1,5 +1,3 @@
-
-
 var stage = "none";
 var setTime;
 const messages = [];
@@ -22,15 +20,9 @@ function drawTxt(x, y, scale, text, r, g, b, a) {
 }
 
 
-onNet('zombie:showNotify', (title, text, duration, type) => {
-  emit("SllimNotify:showNotify",title, text, duration, type)
-
-})
-
-onNet('zombie:drawtxt',async (x,y,scale,text,r,g,b,a,duration=5000) =>{
+onNet('tag:drawtxt',async (x,y,scale,text,r,g,b,a,duration=5000) =>{
   
-  
-     messages.push({
+    messages.push({
       x:x,
       y:y,
       scale:scale,
@@ -38,8 +30,7 @@ onNet('zombie:drawtxt',async (x,y,scale,text,r,g,b,a,duration=5000) =>{
       r:r,g:g,b:b,a:a,
       time: Date.now(),
       duration: duration
-    }) 
-    console.log(text);
+    })
     
   });
 
@@ -59,7 +50,6 @@ setTick(() => {
           message.b,
           message.a);
         }
-
     
       })
 
